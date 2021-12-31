@@ -1,4 +1,4 @@
-# Flask documentation
+# Flask documentation online
 # https://flask.palletsprojects.com/en/2.0.x/
 
 from flask import Flask, flash, render_template, url_for, request, redirect, session
