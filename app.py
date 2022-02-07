@@ -1,43 +1,37 @@
 # Flask documentation online
 # https://flask.palletsprojects.com/en/2.0.x/
-
+from todo import *
 from flask import Flask, flash, render_template, url_for, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 from flask_mysqldb import MySQL
 from var_dump import var_dump
 import views
+import config
 
-app = Flask(__name__)
-app.secret_key = 'GSjzfZGs1IbA83I1huht'
+flaskapp = Flask(__name__)
+flaskapp.secret_key = config.SECRET_KEY
 
 # SQLite config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-db = SQLAlchemy(app)
+flaskapp.config['SQLALCHEMY_DATABASE_URI'] = config.SQLALCHEMY_DATABASE_URI
+db = SQLAlchemy(flaskapp)
 
 # MySQL config
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'covid19'
+flaskapp.config['MYSQL_HOST'] = config.MYSQL_HOST
+flaskapp.config['MYSQL_USER'] = config.MYSQL_USER
+flaskapp.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
+flaskapp.config['MYSQL_DB'] = config.MYSQL_DB
 
 # to get rows as dictionaries, not tuples
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
-mysql = MySQL(app)
+flaskapp.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+mysql = MySQL(flaskapp)
 
 # some routes in views
-app.add_url_rule('/other', view_func=views.other)
-
-class Todo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String(200), nullable=False)
-    date_created = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return '<Task %r>' % self.id
+flaskapp.add_url_rule('/other', view_func=views.other)
 
 
-@app.route('/', methods=['GET','POST'])
+# class Todo
+
+@flaskapp.route('/', methods=['GET', 'POST'])
 def index():
     session['email'] = "steven@inform.be"
     flash("Dit is een flash bericht", category='message')
@@ -59,9 +53,10 @@ def index():
 
 
 # delete
-@app.route('/delete/<int:id>')
+@flaskapp.route('/delete/<int:id>')
 def delete(id):
     task_to_delete = Todo.query.get_or_404(id)
+    print(task_to_delete)
 
     try:
         db.session.delete(task_to_delete)
@@ -72,7 +67,7 @@ def delete(id):
 
 
 # update
-@app.route('/update/<int:id>', methods=['GET', 'POST'])
+@flaskapp.route('/update/<int:id>', methods=['GET', 'POST'])
 def update(id):
     task_to_update = Todo.query.get_or_404(id)
 
@@ -88,8 +83,9 @@ def update(id):
     else:
         return render_template('update.html', task=task_to_update)
 
+
 # login
-@app.route('/login', methods=['GET','POST'])
+@flaskapp.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
@@ -102,12 +98,11 @@ def login():
 
     return render_template('login.html', error=error)
 
-# test mysql
-@app.route('/gemeenten', methods=['GET'])
+
+# gemeenten
+@flaskapp.route('/gemeenten/', methods=['GET'])
 def gemeenten():
     cur = mysql.connection.cursor()
-
-    # cur.execute("""SELECT * FROM gemeente WHERE det_id = %s""", (id,))
     cur.execute("""SELECT * FROM gemeente""")
     data = cur.fetchall()
     cur.close()  # Closing the cursor
@@ -116,8 +111,27 @@ def gemeenten():
     return render_template('gemeenten.html', data=data)
 
 
+# gemeente
+@flaskapp.route('/gemeente/<id>', methods=['GET'])
+def gemeente(id):
+    cur = mysql.connection.cursor()
+    cur.execute("""SELECT * FROM gemeente WHERE det_id = %s""", (id,))
+    data = cur.fetchall()
+    cur.close()  # Closing the cursor
 
+    return render_template('gemeenten.html', data=data)
+
+
+# gemeenten/delete
+@flaskapp.route('/gemeenten/delete/<id>', methods=['GET'])
+def gemeente_delete(id):
+    cur = mysql.connection.cursor()
+    cur.execute("""DELETE FROM gemeente WHERE det_id = %s""", (id,))
+    mysql.connection.commit()
+    cur.close()  # Closing the cursor
+
+    return str(cur.rowcount) + " record(s) deleted"
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    flaskapp.run(debug=True)
